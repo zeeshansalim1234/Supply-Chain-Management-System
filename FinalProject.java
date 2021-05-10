@@ -25,8 +25,11 @@ print(entities)"""
 import csv,numpy,re,emoji,spacy
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud, STOPWORDS
+import sys,os
 
-sp=spacy.load()
+#sp=spacy.load()
 tweets=[]   # contains all tweets
 sizes=[]    # contains sizes of all tweets
 num_tweets = 0 # Number of tweets
@@ -62,11 +65,12 @@ def pre_process_tweets() :
 
         if(tweets[i] is not None)  :
 
-
-            tweets[i]=tweets[i].replace('@','')
-            tweets[i]=tweets[i].replace('#','')
-            tweets[i]=remove_urls(tweets[i])
-            tweets[i]=remove_emojis(tweets[i])
+            tweets[i]=tweets[i].lower()            #To lower case
+            tweets[i]=tweets[i].replace('@','')     # remove @
+            tweets[i]=tweets[i].replace('#','')     # remove #
+            tweets[i]=remove_urls(tweets[i])        # remove URL
+            tweets[i]=remove_emojis(tweets[i])      # remove emojis
+            tweets[i] = "".join(j for j in tweets[i] if j not in ("?", ".", ";", ":", "!","-",",","[","]","(",")","’","‘",'"',"$","'","“","”","•","=","+")) # remove punctuations
 
     return tweets
 
@@ -116,32 +120,83 @@ def get_tokens() :
 
 def remove_stopwords() :
 
-    all_stopwords = sp.Defaults.stop_words
+    all_stopwords = set(stopwords.words('english'))
     tokens_without_sw = [word for word in tokens if not word in all_stopwords]
     return tokens_without_sw
+
+def get_POStags() :
+
+    return nltk.pos_tag(tokens_without_sw)
+
+def write_preprocessed_tweets() :
+
+    f = open("tweets.txt", "w", encoding="utf-8")
+
+    for i in range (0,len(tweets)) :
+
+        if(tweets[i] is not None) :
+            f.write(tweets[i])
+            f.write("\n --------------------------------------------------------------------------------------------------------------------------------------------------------------\n")
+
+    f.close()
+
+def write_keywords(str) :
+
+    f = open("entities.txt", "w",encoding="utf-8")
+
+    for i in range(0,len(str)) :
+        f.write(str[i]+"\n")
+
+    f.close()
 
 def display_tweets() :
 
     for i in range (0,len(tweets)) :
 
         print(tweets[i])
-        print("\n -------------------------------------------------------------------------------------------------\n")
+        print("\n --------------------------------------------------------------------------------------------------------------------------------------------------------------\n")
 
+
+def generate_wordcloud(arg) :
+
+
+    wc = WordCloud(
+        background_color='white',
+        stopwords=STOPWORDS,
+        height=600,
+        width=400
+    )
+
+    str=""
+
+    for i in range(0,len(arg)) :
+
+        str+=arg[i]+" "
+
+    wc.generate(str)
+    wc.to_file('wordcloud.PNG')
 
 extract_tweets()
 average=calculate_average()
 pre_process_tweets()
-display_tweets()
+write_preprocessed_tweets()
 num_tweets=len(tweets)
 tokens=get_tokens()
 tokens_without_sw = remove_stopwords()
+tags=get_POStags()
+meaningful_keywords= [word for word,pos in tags if (pos == 'NNP' or pos=='NN' or pos=='JJ' or pos=='NNS')]
+#meaningful_keywords=list(dict.fromkeys(meaningful_keywords))
+write_keywords(meaningful_keywords)
+generate_wordcloud(meaningful_keywords)
+#entities = nltk.chunk.ne_chunk(tags)
 
-
-
+print("\n\nStatistics of the analysis : \n\n")
 print("Number of tweets : " + str(num_tweets))
-print("Average size of tweets : "+ str(average))
+print("Average size of tweets : "+ str(average) + " words")
 print("Number of tokens : "+str(len(tokens)))
 print("Number of tokens without stopwords : "+str(len(tokens_without_sw)))
+print("Number of meaningful keywords : "+str(len(meaningful_keywords)))
+
 
 
 
